@@ -5,7 +5,7 @@ from django.utils.translation import pgettext_lazy
 from saleor.extensions import ConfigurationTypeField
 from saleor.extensions.base_plugin import BasePlugin
 
-from . import GatewayConfig, capture, create_form, process_payment, refund
+from . import GatewayConfig, capture, create_form, process_payment, refund, get_client_token
 
 GATEWAY_NAME = "Razorpay"
 
@@ -149,8 +149,19 @@ class RazorpayGatewayPlugin(BasePlugin):
             payment_information,
             connection_params=self._get_gateway_config().connection_params,
         )
+    
+    @require_active_plugin
+    def get_client_token(self, token_config: "TokenConfig", previous_value):
+        return get_client_token(self._get_gateway_config(), token_config)
+
+    @require_active_plugin
+    def get_payment_template(self, previous_value) -> str:
+        return self._get_gateway_config().template_path
         
     @require_active_plugin
     def get_payment_config(self, previous_value):
         config = self._get_gateway_config()
-        return [{"field": "api_key", "value": config.connection_params["public_key"]}]
+        return [
+            {"field": "api_key", "value": config.connection_params["public_key"]},
+            {"field": "client_token", "value": get_client_token(config=config)},
+         ]
